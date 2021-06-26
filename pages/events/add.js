@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
-import { API_URL } from '@/config/index';
-import Layout from '@/components/Layout';
-import styles from '@/styles/Form.module.css';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useState } from 'react'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import { API_URL } from '@/config/index'
+import Layout from '@/components/Layout'
+import styles from '@/styles/Form.module.css'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import { parseCookies } from '@/helpers/index'
 
-export default function AddEventPage() {
+export default function AddEventPage({ token }) {
   const [values, setValues] = useState({
     name: '',
     performers: '',
@@ -16,43 +17,48 @@ export default function AddEventPage() {
     date: '',
     time: '',
     description: '',
-  });
+  })
 
-  const router = useRouter();
+  const router = useRouter()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Validation
-    const hasEmptyFields = Object.values(values).some((elem) => elem === '');
+    const hasEmptyFields = Object.values(values).some((elem) => elem === '')
 
     if (hasEmptyFields) {
-      toast.error('Please fill in all fields');
+      toast.error('Please fill in all fields')
     }
-
+    // Send POST request to add event
     const res = await fetch(`${API_URL}/events`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(values),
-    });
+    })
 
     if (!res.ok) {
-      toast.error('Something went worng');
+      if (res.status === 403 || res.status === 401) {
+        toast.error('No token included')
+        return
+      }
+      toast.error('Something went worng')
     } else {
-      const event = await res.json();
-      router.push(`/events/${event.slug}`);
+      const event = await res.json()
+      router.push(`/events/${event.slug}`)
     }
-  };
+  }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setValues((values) => ({
       ...values,
       [name]: value,
-    }));
-  };
+    }))
+  }
 
   return (
     <Layout title="Add New Event">
@@ -137,5 +143,15 @@ export default function AddEventPage() {
         <input type="submit" value="Add Event" className="btn" />
       </form>
     </Layout>
-  );
+  )
+}
+
+export async function getServerSideProps({ req }) {
+  const { token } = parseCookies(req)
+
+  return {
+    props: {
+      token,
+    },
+  }
 }
